@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - {{ app_name }}{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+<div x-data="settings()" x-init="init()">
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Settings Navigation -->
+        <div class="lg:col-span-1">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+                <nav class="space-y-1">
+                    <button @click="activeTab = 'general'" :class="activeTab === 'general' ? 'bg-primary-50 dark:bg-gray-700 text-primary-600' : ''" class="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <i class="fas fa-cog w-5 mr-2"></i>General
+                    </button>
+                    <button @click="activeTab = 'api'" :class="activeTab === 'api' ? 'bg-primary-50 dark:bg-gray-700 text-primary-600' : ''" class="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <i class="fas fa-key w-5 mr-2"></i>API Keys
+                    </button>
+                    <button @click="activeTab = 'scoring'" :class="activeTab === 'scoring' ? 'bg-primary-50 dark:bg-gray-700 text-primary-600' : ''" class="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <i class="fas fa-star w-5 mr-2"></i>Lead Scoring
+                    </button>
+                    <button @click="activeTab = 'integrations'" :class="activeTab === 'integrations' ? 'bg-primary-50 dark:bg-gray-700 text-primary-600' : ''" class="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <i class="fas fa-plug w-5 mr-2"></i>Integrations
+                    </button>
+                    <button @click="activeTab = 'export'" :class="activeTab === 'export' ? 'bg-primary-50 dark:bg-gray-700 text-primary-600' : ''" class="w-full text-left px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <i class="fas fa-download w-5 mr-2"></i>Export
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Settings Content -->
+        <div class="lg:col-span-2">
+            <!-- General Settings -->
+            <div x-show="activeTab === 'general'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold mb-4">General Settings</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Default Scrape Timeout (seconds)</label>
+                        <input type="number" value="30" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Max Concurrent Scrapes</label>
+                        <input type="number" value="5" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Rate Limit Delay (seconds)</label>
+                        <input type="number" value="1" step="0.1" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700">
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" checked class="rounded text-primary-500 mr-2">
+                            <span class="text-sm">Auto-enrich new leads</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" checked class="rounded text-primary-500 mr-2">
+                            <span class="text-sm">Auto-score new leads</span>
+                        </label>
+                    </div>
+                </div>
+                <button class="mt-6 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg">
+                    Save Changes
+                </button>
+            </div>
+
+            <!-- API Keys -->
+            <div x-show="activeTab === 'api'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold mb-4">API Configuration</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">OpenAI API Key</label>
+                        <input type="password" value="sk-..." class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700">
+                        <p class="text-xs text-gray-500 mt-1">Used for LLM extraction and scoring</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Airtable API Key</label>
+                        <input type="password" value="key..." class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Airtable Base ID</label>
+                        <input type="text" value="app..." class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700">
+                    </div>
+                </div>
+                <button class="mt-6 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg">
+                    Save API Keys
+                </button>
+            </div>
+
+            <!-- Lead Scoring -->
+            <div x-show="activeTab === 'scoring'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold mb-4">Lead Scoring Configuration</h2>
+
+                <div class="mb-6">
+                    <h3 class="font-medium mb-3">Score Weights</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="flex justify-between text-sm mb-1">
+                                <span>Fit Score</span>
+                                <span>35%</span>
+                            </label>
+                            <input type="range" min="0" max="100" value="35" class="w-full">
+                        </div>
+                        <div>
+                            <label class="flex justify-between text-sm mb-1">
+                                <span>Intent Score</span>
+                                <span>30%</span>
+                            </label>
+                            <input type="range" min="0" max="100" value="30" class="w-full">
+                        </div>
+                        <div>
+                            <label class="flex justify-between text-sm mb-1">
+                                <span>Engagement Score</span>
+                                <span>20%</span>
+                            </label>
+                            <input type="range" min="0" max="100" value="20" class="w-full">
+                        </div>
+                        <div>
+                            <label class="flex justify-between text-sm mb-1">
+                                <span>Data Quality</span>
+                                <span>15%</span>
+                            </label>
+                            <input type="range" min="0" max="100" value="15" class="w-full">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="font-medium mb-3">Ideal Customer Profile</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm mb-1">Target Industries</label>
+                            <input type="text" value="technology, software, saas, fintech" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700">
+                        </div>
+                        <div>
+                            <label class="block text-sm mb-1">Company Sizes</label>
+                            <input type="text" value="11-50, 51-200, 201-500" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700">
+                        </div>
+                        <div>
+                            <label class="block text-sm mb-1">Target Technologies</label>
+                            <input type="text" value="react, python, aws, kubernetes" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg">
+                    Save Scoring Config
+                </button>
+            </div>
+
+            <!-- Integrations -->
+            <div x-show="activeTab === 'integrations'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold mb-4">Integrations</h2>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-4 border dark:border-gray-600 rounded-lg">
+                        <div class="flex items-center">
+                            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/airtable.svg" class="w-8 h-8 mr-3 dark:invert">
+                            <div>
+                                <p class="font-medium">Airtable</p>
+                                <p class="text-sm text-gray-500">Sync leads to Airtable</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs rounded">Connected</span>
+                    </div>
+                    <div class="flex items-center justify-between p-4 border dark:border-gray-600 rounded-lg">
+                        <div class="flex items-center">
+                            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/hubspot.svg" class="w-8 h-8 mr-3 dark:invert">
+                            <div>
+                                <p class="font-medium">HubSpot</p>
+                                <p class="text-sm text-gray-500">Push leads to HubSpot CRM</p>
+                            </div>
+                        </div>
+                        <button class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-sm rounded">Connect</button>
+                    </div>
+                    <div class="flex items-center justify-between p-4 border dark:border-gray-600 rounded-lg">
+                        <div class="flex items-center">
+                            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/salesforce.svg" class="w-8 h-8 mr-3 dark:invert">
+                            <div>
+                                <p class="font-medium">Salesforce</p>
+                                <p class="text-sm text-gray-500">Sync with Salesforce CRM</p>
+                            </div>
+                        </div>
+                        <button class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-sm rounded">Connect</button>
+                    </div>
+                    <div class="flex items-center justify-between p-4 border dark:border-gray-600 rounded-lg">
+                        <div class="flex items-center">
+                            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/zapier.svg" class="w-8 h-8 mr-3 dark:invert">
+                            <div>
+                                <p class="font-medium">Zapier</p>
+                                <p class="text-sm text-gray-500">Connect to 5000+ apps</p>
+                            </div>
+                        </div>
+                        <button class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-sm rounded">Connect</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export -->
+            <div x-show="activeTab === 'export'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold mb-4">Export Data</h2>
+                <div class="space-y-4">
+                    <div class="p-4 border dark:border-gray-600 rounded-lg">
+                        <h3 class="font-medium mb-2">Export All Leads</h3>
+                        <p class="text-sm text-gray-500 mb-3">Download all your leads in your preferred format</p>
+                        <div class="flex gap-2">
+                            <button @click="exportData('csv')" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm">
+                                <i class="fas fa-file-csv mr-2"></i>CSV
+                            </button>
+                            <button @click="exportData('json')" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm">
+                                <i class="fas fa-file-code mr-2"></i>JSON
+                            </button>
+                            <button @click="exportData('excel')" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm">
+                                <i class="fas fa-file-excel mr-2"></i>Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-4 border dark:border-gray-600 rounded-lg">
+                        <h3 class="font-medium mb-2">API Access</h3>
+                        <p class="text-sm text-gray-500 mb-3">Use the API to programmatically access your data</p>
+                        <div class="flex items-center gap-2">
+                            <code class="flex-1 p-2 bg-gray-100 dark:bg-gray-700 rounded text-sm">https://api.leadgenpro.com/v1</code>
+                            <a href="/api/docs" target="_blank" class="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm">
+                                View Docs
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function settings() {
+    return {
+        activeTab: 'general',
+
+        init() {},
+
+        async exportData(format) {
+            try {
+                const response = await fetch('/api/v1/leads/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ format })
+                });
+
+                if (format === 'json') {
+                    const data = await response.json();
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'leads.json';
+                    a.click();
+                } else {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `leads.${format}`;
+                    a.click();
+                }
+
+                showToast('Export downloaded');
+            } catch (e) {
+                showToast('Failed to export', 'error');
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

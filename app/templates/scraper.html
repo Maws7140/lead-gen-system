@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+
+{% block title %}Web Scraper - {{ app_name }}{% endblock %}
+{% block page_title %}Web Scraper{% endblock %}
+
+{% block content %}
+<div x-data="scraper()" x-init="init()">
+
+    <!-- Mode Selection -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+        <div class="p-6">
+            <h2 class="text-lg font-semibold mb-4">Select Scraping Mode</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Single Page -->
+                <button
+                    @click="mode = 'single'"
+                    :class="mode === 'single' ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
+                    class="p-4 rounded-lg border dark:border-gray-600 text-left transition-all"
+                >
+                    <i class="fas fa-file text-2xl text-primary-500 mb-2"></i>
+                    <h3 class="font-semibold">Single Page</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Scrape a single URL</p>
+                </button>
+
+                <!-- Crawl Site -->
+                <button
+                    @click="mode = 'crawl'"
+                    :class="mode === 'crawl' ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
+                    class="p-4 rounded-lg border dark:border-gray-600 text-left transition-all"
+                >
+                    <i class="fas fa-spider text-2xl text-green-500 mb-2"></i>
+                    <h3 class="font-semibold">Crawl Site</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Crawl entire website</p>
+                </button>
+
+                <!-- Map Site -->
+                <button
+                    @click="mode = 'map'"
+                    :class="mode === 'map' ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
+                    class="p-4 rounded-lg border dark:border-gray-600 text-left transition-all"
+                >
+                    <i class="fas fa-sitemap text-2xl text-purple-500 mb-2"></i>
+                    <h3 class="font-semibold">Map Site</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Create sitemap</p>
+                </button>
+
+                <!-- Search -->
+                <button
+                    @click="mode = 'search'"
+                    :class="mode === 'search' ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
+                    class="p-4 rounded-lg border dark:border-gray-600 text-left transition-all"
+                >
+                    <i class="fas fa-search text-2xl text-orange-500 mb-2"></i>
+                    <h3 class="font-semibold">Search & Scrape</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Search and scrape results</p>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scraping Form -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Form -->
+        <div class="lg:col-span-2">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div class="p-6">
+                    <h2 class="text-lg font-semibold mb-4">
+                        <span x-show="mode === 'single'">Scrape Single Page</span>
+                        <span x-show="mode === 'crawl'">Crawl Website</span>
+                        <span x-show="mode === 'map'">Map Website</span>
+                        <span x-show="mode === 'search'">Search & Scrape</span>
+                    </h2>
+
+                    <!-- URL Input (for single, crawl, map) -->
+                    <div x-show="mode !== 'search'" class="mb-4">
+                        <label class="block text-sm font-medium mb-2">URL</label>
+                        <input
+                            type="url"
+                            x-model="url"
+                            placeholder="https://example.com"
+                            class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        >
+                    </div>
+
+                    <!-- Search Query (for search mode) -->
+                    <div x-show="mode === 'search'" class="mb-4">
+                        <label class="block text-sm font-medium mb-2">Search Query</label>
+                        <input
+                            type="text"
+                            x-model="searchQuery"
+                            placeholder="e.g., technology startups in San Francisco"
+                            class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        >
+                    </div>
+
+                    <!-- Max Pages (for crawl, map, search) -->
+                    <div x-show="mode !== 'single'" class="mb-4">
+                        <label class="block text-sm font-medium mb-2">
+                            <span x-show="mode === 'search'">Number of Results</span>
+                            <span x-show="mode !== 'search'">Max Pages</span>
+                        </label>
+                        <input
+                            type="number"
+                            x-model="maxPages"
+                            min="1"
+                            max="100"
+                            class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        >
+                    </div>
+
+                    <!-- Extraction Schema Toggle -->
+                    <div class="mb-4">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" x-model="useSchema" class="rounded text-primary-500 mr-2">
+                            <span class="text-sm">Use custom extraction schema</span>
+                        </label>
+                    </div>
+
+                    <!-- Custom Schema -->
+                    <div x-show="useSchema" class="mb-4">
+                        <label class="block text-sm font-medium mb-2">Extraction Schema (JSON)</label>
+                        <textarea
+                            x-model="schemaText"
+                            rows="6"
+                            placeholder='{
+  "company_name": "string",
+  "contact_email": "string",
+  "phone": "string"
+}'
+                            class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm"
+                        ></textarea>
+                    </div>
+
+                    <!-- URL Patterns (for crawl mode) -->
+                    <div x-show="mode === 'crawl'" class="mb-4">
+                        <label class="block text-sm font-medium mb-2">Include URL Patterns (optional)</label>
+                        <input
+                            type="text"
+                            x-model="includePatterns"
+                            placeholder="e.g., /products/, /services/"
+                            class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        >
+                        <p class="text-xs text-gray-500 mt-1">Comma-separated regex patterns</p>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button
+                        @click="startScrape()"
+                        :disabled="loading"
+                        class="w-full py-3 px-4 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors flex items-center justify-center"
+                    >
+                        <span x-show="!loading">
+                            <i class="fas fa-play mr-2"></i>
+                            Start Scraping
+                        </span>
+                        <span x-show="loading">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>
+                            Scraping...
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Help Panel -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div class="p-6">
+                <h3 class="font-semibold mb-4">Mode Guide</h3>
+
+                <div x-show="mode === 'single'" class="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                    <p><strong>Single Page Mode</strong> scrapes one URL and extracts data using AI.</p>
+                    <ul class="list-disc pl-4 space-y-1">
+                        <li>Fast extraction (2-5 seconds)</li>
+                        <li>Automatic lead detection</li>
+                        <li>Custom schema support</li>
+                        <li>Markdown conversion</li>
+                    </ul>
+                </div>
+
+                <div x-show="mode === 'crawl'" class="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                    <p><strong>Crawl Mode</strong> follows links to scrape multiple pages from a website.</p>
+                    <ul class="list-disc pl-4 space-y-1">
+                        <li>Automatic link discovery</li>
+                        <li>Respects same-domain</li>
+                        <li>URL pattern filtering</li>
+                        <li>Rate limiting built-in</li>
+                    </ul>
+                </div>
+
+                <div x-show="mode === 'map'" class="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                    <p><strong>Map Mode</strong> creates a sitemap of all pages on a website.</p>
+                    <ul class="list-disc pl-4 space-y-1">
+                        <li>Discovers all pages</li>
+                        <li>Page type classification</li>
+                        <li>Depth analysis</li>
+                        <li>No content extraction</li>
+                    </ul>
+                </div>
+
+                <div x-show="mode === 'search'" class="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                    <p><strong>Search Mode</strong> searches the web and scrapes the results.</p>
+                    <ul class="list-disc pl-4 space-y-1">
+                        <li>Web search integration</li>
+                        <li>Automatic result scraping</li>
+                        <li>Lead extraction</li>
+                        <li>Multiple results</li>
+                    </ul>
+                </div>
+
+                <div class="mt-6 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
+                    <h4 class="font-medium text-primary-700 dark:text-primary-300 mb-2">Pro Tip</h4>
+                    <p class="text-sm text-primary-600 dark:text-primary-400">
+                        Use the extraction schema to pull specific data fields. The AI will intelligently map content to your schema.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div x-show="result" class="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div class="p-6 border-b dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold">Scrape Results</h2>
+                <span class="px-3 py-1 rounded-full text-sm" :class="result?.success ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'">
+                    <span x-text="result?.success ? 'Success' : 'Failed'"></span>
+                </span>
+            </div>
+        </div>
+        <div class="p-6">
+            <!-- Metadata -->
+            <div x-show="result?.metadata" class="mb-6">
+                <h3 class="font-medium mb-2">Page Metadata</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-500">Title</span>
+                        <p class="font-medium" x-text="result?.metadata?.title || 'N/A'"></p>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Status</span>
+                        <p class="font-medium" x-text="result?.metadata?.status_code || 'N/A'"></p>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Content Length</span>
+                        <p class="font-medium" x-text="result?.metadata?.content_length ? (result.metadata.content_length / 1024).toFixed(1) + ' KB' : 'N/A'"></p>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Pages</span>
+                        <p class="font-medium" x-text="result?.pages_crawled || result?.results_found || 1"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lead Info -->
+            <div x-show="result?.lead_info" class="mb-6">
+                <h3 class="font-medium mb-2">Extracted Lead Information</h3>
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div x-show="result?.lead_info?.company_name">
+                            <span class="text-gray-500">Company</span>
+                            <p class="font-medium" x-text="result?.lead_info?.company_name"></p>
+                        </div>
+                        <div x-show="result?.lead_info?.industry">
+                            <span class="text-gray-500">Industry</span>
+                            <p class="font-medium" x-text="result?.lead_info?.industry"></p>
+                        </div>
+                        <div x-show="result?.lead_info?.contact_email">
+                            <span class="text-gray-500">Email</span>
+                            <p class="font-medium" x-text="result?.lead_info?.contact_email"></p>
+                        </div>
+                        <div x-show="result?.lead_info?.contact_phone">
+                            <span class="text-gray-500">Phone</span>
+                            <p class="font-medium" x-text="result?.lead_info?.contact_phone"></p>
+                        </div>
+                    </div>
+                    <div x-show="result?.lead_info?.description" class="mt-4">
+                        <span class="text-gray-500 text-sm">Description</span>
+                        <p class="text-sm mt-1" x-text="result?.lead_info?.description"></p>
+                    </div>
+                    <div x-show="result?.lead_info?.technologies?.length" class="mt-4">
+                        <span class="text-gray-500 text-sm">Technologies</span>
+                        <div class="flex flex-wrap gap-2 mt-1">
+                            <template x-for="tech in result?.lead_info?.technologies || []">
+                                <span class="px-2 py-1 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 rounded text-xs" x-text="tech"></span>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Extracted Data -->
+            <div x-show="result?.extracted_data && !result?.extracted_data?.error" class="mb-6">
+                <h3 class="font-medium mb-2">Custom Extracted Data</h3>
+                <pre class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 overflow-auto text-sm"><code x-text="JSON.stringify(result?.extracted_data, null, 2)"></code></pre>
+            </div>
+
+            <!-- Sitemap Results -->
+            <div x-show="result?.sitemap" class="mb-6">
+                <h3 class="font-medium mb-2">Sitemap (<span x-text="result?.total_pages"></span> pages)</h3>
+                <div class="max-h-64 overflow-auto bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <table class="w-full text-sm">
+                        <thead class="sticky top-0 bg-gray-100 dark:bg-gray-600">
+                            <tr>
+                                <th class="px-4 py-2 text-left">URL</th>
+                                <th class="px-4 py-2 text-left">Type</th>
+                                <th class="px-4 py-2 text-left">Depth</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="page in result?.sitemap || []">
+                                <tr class="border-t dark:border-gray-600">
+                                    <td class="px-4 py-2 truncate max-w-md" x-text="page.url"></td>
+                                    <td class="px-4 py-2" x-text="page.type"></td>
+                                    <td class="px-4 py-2" x-text="page.depth"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex space-x-4">
+                <button
+                    x-show="result?.lead_info?.company_name"
+                    @click="saveAsLead()"
+                    class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm"
+                >
+                    <i class="fas fa-save mr-2"></i>Save as Lead
+                </button>
+                <button
+                    @click="result = null"
+                    class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-sm"
+                >
+                    Clear Results
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function scraper() {
+    return {
+        mode: 'single',
+        url: '',
+        searchQuery: '',
+        maxPages: 10,
+        useSchema: false,
+        schemaText: '',
+        includePatterns: '',
+        loading: false,
+        result: null,
+
+        init() {
+            // Initialize with default schema
+            this.schemaText = JSON.stringify({
+                "company_name": "string - Company name",
+                "contact_email": "string - Email address",
+                "contact_phone": "string - Phone number",
+                "services": "array - List of services offered"
+            }, null, 2);
+        },
+
+        async startScrape() {
+            if (this.mode !== 'search' && !this.url) {
+                showToast('Please enter a URL', 'error');
+                return;
+            }
+            if (this.mode === 'search' && !this.searchQuery) {
+                showToast('Please enter a search query', 'error');
+                return;
+            }
+
+            this.loading = true;
+            this.result = null;
+
+            try {
+                let data, endpoint;
+
+                if (this.mode === 'search') {
+                    endpoint = '/search';
+                    data = {
+                        query: this.searchQuery,
+                        num_results: this.maxPages,
+                        extraction_schema: this.useSchema ? JSON.parse(this.schemaText) : null
+                    };
+                } else {
+                    endpoint = '/scrape';
+                    data = {
+                        url: this.url,
+                        mode: this.mode,
+                        max_pages: this.maxPages,
+                        extraction_schema: this.useSchema ? JSON.parse(this.schemaText) : null
+                    };
+
+                    if (this.mode === 'crawl' && this.includePatterns) {
+                        data.include_patterns = this.includePatterns.split(',').map(p => p.trim());
+                    }
+                }
+
+                this.result = await api.post(endpoint, data);
+
+                if (this.result.success) {
+                    showToast('Scraping completed successfully!');
+                } else {
+                    showToast('Scraping failed: ' + (this.result.error || 'Unknown error'), 'error');
+                }
+
+            } catch (e) {
+                console.error('Scrape error:', e);
+                showToast('Scraping failed: ' + e.message, 'error');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async saveAsLead() {
+            if (!this.result?.lead_info) return;
+
+            const lead = this.result.lead_info;
+            try {
+                await api.post('/leads', {
+                    company_name: lead.company_name || 'Unknown',
+                    website: this.url,
+                    industry: lead.industry,
+                    contact_email: lead.contact_email,
+                    contact_phone: lead.contact_phone,
+                    source: 'web_scraper'
+                });
+                showToast('Lead saved successfully!');
+            } catch (e) {
+                showToast('Failed to save lead', 'error');
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

@@ -1,8 +1,63 @@
+# Core dependencies
 python-dotenv==1.0.0
 requests==2.31.0
 airtable-python-api==0.15.3
 openai==1.12.0
+
+# Document processing
 PyPDF2==3.0.1
 pytesseract==0.3.10
 Pillow==10.2.0
-pdfplumber==0.10.3 
+pdfplumber==0.10.3
+
+# Web framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+jinja2==3.1.3
+
+# Database
+sqlalchemy==2.0.25
+aiosqlite==0.19.0
+
+# Web scraping
+httpx==0.26.0
+beautifulsoup4==4.12.3
+lxml==5.1.0
+playwright==1.41.0
+
+# Async support
+aiofiles==23.2.1
+asyncio-throttle==1.0.2
+
+# Data processing
+pandas==2.2.0
+openpyxl==3.1.2
+
+# Validation
+pydantic==2.6.0
+pydantic-settings==2.1.0
+email-validator==2.1.0
+
+# Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# WebSockets
+websockets==12.0
+
+# Utilities
+tqdm==4.66.1
+fake-useragent==1.4.0
+tenacity==8.2.3
+
+# Rate limiting
+slowapi==0.1.9
+
+# Background tasks
+celery==5.3.6
+redis==5.0.1
+
+# Testing
+pytest==8.0.0
+pytest-asyncio==0.23.4

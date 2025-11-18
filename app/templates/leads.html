@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+
+{% block title %}Leads - {{ app_name }}{% endblock %}
+{% block page_title %}Lead Management{% endblock %}
+
+{% block content %}
+<div x-data="leadsManager()" x-init="init()">
+
+    <!-- Actions Bar -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <!-- Search & Filters -->
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="relative">
+                    <input
+                        type="text"
+                        x-model="search"
+                        @input.debounce.300ms="loadLeads()"
+                        placeholder="Search leads..."
+                        class="w-full md:w-64 pl-10 pr-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700 focus:ring-2 focus:ring-primary-500"
+                    >
+                    <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                </div>
+                <select
+                    x-model="statusFilter"
+                    @change="loadLeads()"
+                    class="px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700 focus:ring-2 focus:ring-primary-500"
+                >
+                    <option value="">All Statuses</option>
+                    <option value="new">New</option>
+                    <option value="enriched">Enriched</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="qualified">Qualified</option>
+                    <option value="converted">Converted</option>
+                    <option value="lost">Lost</option>
+                </select>
+                <select
+                    x-model="scoreFilter"
+                    @change="loadLeads()"
+                    class="px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700 focus:ring-2 focus:ring-primary-500"
+                >
+                    <option value="">All Scores</option>
+                    <option value="70">Hot (70+)</option>
+                    <option value="40">Warm (40+)</option>
+                    <option value="0">All Scored</option>
+                </select>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-2">
+                <button @click="showBulkActions = !showBulkActions" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm">
+                    <i class="fas fa-tasks mr-2"></i>Bulk Actions
+                </button>
+                <button @click="showImportModal = true" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm">
+                    <i class="fas fa-upload mr-2"></i>Import
+                </button>
+                <button @click="exportLeads()" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm">
+                    <i class="fas fa-download mr-2"></i>Export
+                </button>
+                <button @click="showAddModal = true" class="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm">
+                    <i class="fas fa-plus mr-2"></i>Add Lead
+                </button>
+            </div>
+        </div>
+
+        <!-- Bulk Actions -->
+        <div x-show="showBulkActions && selectedLeads.length > 0" class="mt-4 pt-4 border-t dark:border-gray-700">
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-gray-500"><span x-text="selectedLeads.length"></span> selected</span>
+                <button @click="bulkScore()" class="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded text-sm hover:bg-green-200">
+                    <i class="fas fa-star mr-1"></i>Score
+                </button>
+                <button @click="bulkEnrich()" class="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded text-sm hover:bg-blue-200">
+                    <i class="fas fa-magic mr-1"></i>Enrich
+                </button>
+                <button @click="bulkDelete()" class="px-3 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded text-sm hover:bg-red-200">
+                    <i class="fas fa-trash mr-1"></i>Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leads Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700/50">
+                    <tr>
+                        <th class="px-4 py-3 text-left">
+                            <input type="checkbox" @change="toggleSelectAll($event)" class="rounded">
+                        </th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Industry</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y dark:divide-gray-700">
+                    <template x-for="lead in leads" :key="lead.id">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <td class="px-4 py-4">
+                                <input type="checkbox" :value="lead.id" x-model="selectedLeads" class="rounded">
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="flex items-center">
+                                    <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mr-3">
+                                        <i class="fas fa-building text-gray-400 text-xs"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium" x-text="lead.company_name"></p>
+                                        <a :href="lead.website" target="_blank" class="text-xs text-primary-500 hover:underline" x-text="lead.website?.replace(/https?:\/\//, '').substring(0, 30)"></a>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <p class="text-sm" x-text="lead.contact_name || '-'"></p>
+                                <p class="text-xs text-gray-500" x-text="lead.contact_email || 'No email'"></p>
+                            </td>
+                            <td class="px-4 py-4 text-sm" x-text="lead.industry || '-'"></td>
+                            <td class="px-4 py-4">
+                                <div class="flex items-center">
+                                    <span class="text-sm font-semibold mr-2" :class="{
+                                        'text-green-500': lead.lead_score >= 70,
+                                        'text-yellow-500': lead.lead_score >= 40 && lead.lead_score < 70,
+                                        'text-gray-400': lead.lead_score < 40 || !lead.lead_score
+                                    }" x-text="lead.lead_score || '-'"></span>
+                                    <div class="w-12 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                        <div class="h-1.5 rounded-full" :class="{
+                                            'bg-green-500': lead.lead_score >= 70,
+                                            'bg-yellow-500': lead.lead_score >= 40 && lead.lead_score < 70,
+                                            'bg-gray-400': lead.lead_score < 40 || !lead.lead_score
+                                        }" :style="'width: ' + (lead.lead_score || 0) + '%'"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <span class="px-2 py-1 text-xs rounded-full" :class="{
+                                    'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300': lead.status === 'new',
+                                    'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300': lead.status === 'enriched',
+                                    'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300': lead.status === 'contacted',
+                                    'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300': lead.status === 'qualified' || lead.status === 'converted',
+                                    'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300': lead.status === 'lost'
+                                }" x-text="lead.status"></span>
+                            </td>
+                            <td class="px-4 py-4 text-sm text-gray-500" x-text="lead.source || '-'"></td>
+                            <td class="px-4 py-4">
+                                <div class="flex space-x-2">
+                                    <button @click="viewLead(lead)" class="text-gray-400 hover:text-primary-500" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button @click="scoreLead(lead.id)" class="text-gray-400 hover:text-green-500" title="Score">
+                                        <i class="fas fa-star"></i>
+                                    </button>
+                                    <button @click="enrichLead(lead.id)" class="text-gray-400 hover:text-blue-500" title="Enrich">
+                                        <i class="fas fa-magic"></i>
+                                    </button>
+                                    <button @click="deleteLead(lead.id)" class="text-gray-400 hover:text-red-500" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <tr x-show="leads.length === 0">
+                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                            <i class="fas fa-inbox text-4xl mb-2"></i>
+                            <p>No leads found</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="px-4 py-3 border-t dark:border-gray-700 flex items-center justify-between">
+            <p class="text-sm text-gray-500">
+                Showing <span x-text="leads.length"></span> of <span x-text="totalLeads"></span> leads
+            </p>
+            <div class="flex space-x-2">
+                <button @click="prevPage()" :disabled="currentPage === 1" class="px-3 py-1 rounded border dark:border-gray-600 disabled:opacity-50">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span class="px-3 py-1">Page <span x-text="currentPage"></span></span>
+                <button @click="nextPage()" :disabled="leads.length < 20" class="px-3 py-1 rounded border dark:border-gray-600 disabled:opacity-50">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Lead Modal -->
+    <div x-show="selectedLead" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="selectedLead = null">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto m-4">
+            <div class="p-6 border-b dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-semibold" x-text="selectedLead?.company_name"></h2>
+                    <button @click="selectedLead = null" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm text-gray-500">Website</label>
+                        <p class="font-medium" x-text="selectedLead?.website || '-'"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500">Industry</label>
+                        <p class="font-medium" x-text="selectedLead?.industry || '-'"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500">Contact Name</label>
+                        <p class="font-medium" x-text="selectedLead?.contact_name || '-'"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500">Email</label>
+                        <p class="font-medium" x-text="selectedLead?.contact_email || '-'"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500">Phone</label>
+                        <p class="font-medium" x-text="selectedLead?.contact_phone || '-'"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500">Lead Score</label>
+                        <p class="font-medium" x-text="selectedLead?.lead_score || 'Not scored'"></p>
+                    </div>
+                </div>
+
+                <div x-show="selectedLead?.ai_summary">
+                    <label class="text-sm text-gray-500">AI Summary</label>
+                    <p class="text-sm mt-1" x-text="selectedLead?.ai_summary"></p>
+                </div>
+
+                <div x-show="selectedLead?.technologies?.length">
+                    <label class="text-sm text-gray-500">Technologies</label>
+                    <div class="flex flex-wrap gap-2 mt-1">
+                        <template x-for="tech in selectedLead?.technologies || []">
+                            <span class="px-2 py-1 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 rounded text-xs" x-text="tech"></span>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Lead Modal -->
+    <div x-show="showAddModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showAddModal = false">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full m-4">
+            <div class="p-6 border-b dark:border-gray-700">
+                <h2 class="text-lg font-semibold">Add New Lead</h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Company Name *</label>
+                    <input type="text" x-model="newLead.company_name" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Website</label>
+                    <input type="url" x-model="newLead.website" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Industry</label>
+                    <input type="text" x-model="newLead.industry" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Contact Email</label>
+                    <input type="email" x-model="newLead.contact_email" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Contact Phone</label>
+                    <input type="tel" x-model="newLead.contact_phone" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700">
+                </div>
+            </div>
+            <div class="p-6 border-t dark:border-gray-700 flex justify-end gap-2">
+                <button @click="showAddModal = false" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg">Cancel</button>
+                <button @click="addLead()" class="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg">Add Lead</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function leadsManager() {
+    return {
+        leads: [],
+        totalLeads: 0,
+        selectedLeads: [],
+        selectedLead: null,
+        search: '',
+        statusFilter: '',
+        scoreFilter: '',
+        currentPage: 1,
+        showBulkActions: false,
+        showAddModal: false,
+        showImportModal: false,
+        newLead: {
+            company_name: '',
+            website: '',
+            industry: '',
+            contact_email: '',
+            contact_phone: ''
+        },
+
+        async init() {
+            await this.loadLeads();
+        },
+
+        async loadLeads() {
+            try {
+                let url = `/leads?limit=20&offset=${(this.currentPage - 1) * 20}`;
+                if (this.search) url += `&search=${encodeURIComponent(this.search)}`;
+                if (this.statusFilter) url += `&status=${this.statusFilter}`;
+                if (this.scoreFilter) url += `&min_score=${this.scoreFilter}`;
+
+                const result = await api.get(url);
+                this.leads = result.leads || [];
+                this.totalLeads = result.total || 0;
+            } catch (e) {
+                console.error('Failed to load leads:', e);
+            }
+        },
+
+        async viewLead(lead) {
+            try {
+                this.selectedLead = await api.get(`/leads/${lead.id}`);
+            } catch (e) {
+                this.selectedLead = lead;
+            }
+        },
+
+        async scoreLead(id) {
+            try {
+                const result = await api.post(`/leads/${id}/score`);
+                showToast(`Lead scored: ${result.total_score}/100 (${result.grade})`);
+                await this.loadLeads();
+            } catch (e) {
+                showToast('Failed to score lead', 'error');
+            }
+        },
+
+        async enrichLead(id) {
+            try {
+                showToast('Enriching lead...', 'info');
+                const result = await api.post(`/leads/${id}/enrich`);
+                showToast(`Lead enriched! ${result.fields_added} fields added`);
+                await this.loadLeads();
+            } catch (e) {
+                showToast('Failed to enrich lead', 'error');
+            }
+        },
+
+        async deleteLead(id) {
+            if (!confirm('Are you sure you want to delete this lead?')) return;
+            try {
+                await api.delete(`/leads/${id}`);
+                showToast('Lead deleted');
+                await this.loadLeads();
+            } catch (e) {
+                showToast('Failed to delete lead', 'error');
+            }
+        },
+
+        async addLead() {
+            if (!this.newLead.company_name) {
+                showToast('Company name is required', 'error');
+                return;
+            }
+            try {
+                await api.post('/leads', this.newLead);
+                showToast('Lead added successfully');
+                this.showAddModal = false;
+                this.newLead = { company_name: '', website: '', industry: '', contact_email: '', contact_phone: '' };
+                await this.loadLeads();
+            } catch (e) {
+                showToast('Failed to add lead', 'error');
+            }
+        },
+
+        async bulkScore() {
+            if (this.selectedLeads.length === 0) return;
+            try {
+                showToast(`Scoring ${this.selectedLeads.length} leads...`, 'info');
+                await api.post('/leads/bulk-score', this.selectedLeads);
+                showToast('Leads scored successfully');
+                this.selectedLeads = [];
+                await this.loadLeads();
+            } catch (e) {
+                showToast('Failed to score leads', 'error');
+            }
+        },
+
+        async bulkEnrich() {
+            showToast('Bulk enrichment started', 'info');
+            // Enrich each lead sequentially
+            for (const id of this.selectedLeads) {
+                await this.enrichLead(id);
+            }
+            this.selectedLeads = [];
+        },
+
+        async bulkDelete() {
+            if (!confirm(`Are you sure you want to delete ${this.selectedLeads.length} leads?`)) return;
+            for (const id of this.selectedLeads) {
+                await api.delete(`/leads/${id}`);
+            }
+            showToast('Leads deleted');
+            this.selectedLeads = [];
+            await this.loadLeads();
+        },
+
+        async exportLeads() {
+            try {
+                const response = await fetch('/api/v1/leads/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ format: 'csv' })
+                });
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'leads.csv';
+                a.click();
+                showToast('Export downloaded');
+            } catch (e) {
+                showToast('Failed to export', 'error');
+            }
+        },
+
+        toggleSelectAll(event) {
+            if (event.target.checked) {
+                this.selectedLeads = this.leads.map(l => l.id);
+            } else {
+                this.selectedLeads = [];
+            }
+        },
+
+        prevPage() {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+                this.loadLeads();
+            }
+        },
+
+        nextPage() {
+            this.currentPage++;
+            this.loadLeads();
+        }
+    };
+}
+</script>
+{% endblock %}
