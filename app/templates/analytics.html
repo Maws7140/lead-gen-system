@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - {{ app_name }}{% endblock %}
+{% block page_title %}Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div x-data="analytics()" x-init="init()">
+
+    <!-- Date Range Selector -->
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-lg font-semibold">Performance Overview</h2>
+        <select class="px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700 text-sm">
+            <option>Last 7 days</option>
+            <option>Last 30 days</option>
+            <option>Last 90 days</option>
+            <option>All time</option>
+        </select>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">Total Leads</p>
+                    <p class="text-3xl font-bold mt-1" x-text="stats.total_leads">-</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center">
+                    <i class="fas fa-users text-primary-500"></i>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center text-sm">
+                <span class="text-green-500"><i class="fas fa-arrow-up mr-1"></i><span x-text="stats.recent_leads">0</span></span>
+                <span class="text-gray-500 ml-2">this week</span>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">Avg Lead Score</p>
+                    <p class="text-3xl font-bold mt-1" x-text="stats.avg_score">-</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                    <i class="fas fa-chart-line text-green-500"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div class="bg-green-500 h-2 rounded-full transition-all" :style="'width: ' + stats.avg_score + '%'"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">Hot Leads</p>
+                    <p class="text-3xl font-bold mt-1" x-text="stats.high_quality_leads">-</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                    <i class="fas fa-fire text-red-500"></i>
+                </div>
+            </div>
+            <div class="mt-4 text-sm text-gray-500">
+                Score 70+
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">Conversion Rate</p>
+                    <p class="text-3xl font-bold mt-1" x-text="conversionRate + '%'">-</p>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
+                    <i class="fas fa-trophy text-purple-500"></i>
+                </div>
+            </div>
+            <div class="mt-4 text-sm text-gray-500">
+                <span x-text="stats.by_status?.converted || 0"></span> converted
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Lead Score Distribution -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+            <h3 class="font-semibold mb-4">Lead Score Distribution</h3>
+            <canvas id="scoreDistChart" height="200"></canvas>
+        </div>
+
+        <!-- Leads by Industry -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+            <h3 class="font-semibold mb-4">Leads by Industry</h3>
+            <canvas id="industryChart" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Status Breakdown -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Lead Status -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+            <h3 class="font-semibold mb-4">Lead Status Breakdown</h3>
+            <div class="space-y-4">
+                <template x-for="(count, status) in stats.by_status || {}" :key="status">
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="capitalize" x-text="status"></span>
+                            <span x-text="count"></span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div class="h-2 rounded-full" :class="{
+                                'bg-blue-500': status === 'new',
+                                'bg-purple-500': status === 'enriched',
+                                'bg-yellow-500': status === 'contacted',
+                                'bg-green-500': status === 'qualified' || status === 'converted',
+                                'bg-red-500': status === 'lost'
+                            }" :style="'width: ' + (count / stats.total_leads * 100) + '%'"></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Top Industries -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+            <h3 class="font-semibold mb-4">Top Industries</h3>
+            <div class="space-y-3">
+                <template x-for="(count, industry) in stats.top_industries || {}" :key="industry">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <span class="font-medium" x-text="industry || 'Unknown'"></span>
+                        <span class="text-sm text-gray-500" x-text="count + ' leads'"></span>
+                    </div>
+                </template>
+                <p x-show="Object.keys(stats.top_industries || {}).length === 0" class="text-sm text-gray-500 text-center py-4">
+                    No industry data yet
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+        <h3 class="font-semibold mb-4">Performance Insights</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="text-center p-4 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg">
+                <i class="fas fa-clock text-2xl text-blue-500 mb-2"></i>
+                <p class="text-sm text-gray-500">Avg Time to Qualify</p>
+                <p class="text-xl font-bold">3.2 days</p>
+            </div>
+            <div class="text-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg">
+                <i class="fas fa-percentage text-2xl text-green-500 mb-2"></i>
+                <p class="text-sm text-gray-500">Enrichment Rate</p>
+                <p class="text-xl font-bold">85%</p>
+            </div>
+            <div class="text-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg">
+                <i class="fas fa-bullseye text-2xl text-purple-500 mb-2"></i>
+                <p class="text-sm text-gray-500">ICP Match Rate</p>
+                <p class="text-xl font-bold">67%</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function analytics() {
+    return {
+        stats: {},
+        conversionRate: 0,
+
+        async init() {
+            await this.loadStats();
+            this.initCharts();
+        },
+
+        async loadStats() {
+            try {
+                this.stats = await api.get('/analytics/overview');
+
+                // Calculate conversion rate
+                if (this.stats.total_leads > 0) {
+                    const converted = this.stats.by_status?.converted || 0;
+                    this.conversionRate = ((converted / this.stats.total_leads) * 100).toFixed(1);
+                }
+            } catch (e) {
+                console.error('Failed to load stats:', e);
+            }
+        },
+
+        async initCharts() {
+            // Score Distribution Chart
+            try {
+                const distData = await api.get('/analytics/score-distribution');
+                const distribution = distData.distribution || {};
+
+                const scoreCtx = document.getElementById('scoreDistChart').getContext('2d');
+                new Chart(scoreCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(distribution),
+                        datasets: [{
+                            label: 'Leads',
+                            data: Object.values(distribution),
+                            backgroundColor: '#0ea5e9',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Failed to load score distribution:', e);
+            }
+
+            // Industry Chart
+            const industries = Object.entries(this.stats.top_industries || {});
+            const industryCtx = document.getElementById('industryChart').getContext('2d');
+            new Chart(industryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: industries.map(i => i[0] || 'Unknown'),
+                    datasets: [{
+                        data: industries.map(i => i[1]),
+                        backgroundColor: ['#0ea5e9', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+    };
+}
+</script>
+{% endblock %}

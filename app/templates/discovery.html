@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Lead Discovery - {{ app_name }}{% endblock %}
+{% block page_title %}Lead Discovery{% endblock %}
+
+{% block content %}
+<div x-data="discovery()" x-init="init()">
+
+    <!-- Discovery Form -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div class="lg:col-span-2">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold mb-4">Discover New Leads</h2>
+                <p class="text-sm text-gray-500 mb-6">Find potential leads by industry and location using AI-powered search.</p>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Industry *</label>
+                        <input
+                            type="text"
+                            x-model="industry"
+                            placeholder="e.g., Technology, Healthcare, Real Estate"
+                            class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700 focus:ring-2 focus:ring-primary-500"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Location *</label>
+                        <input
+                            type="text"
+                            x-model="location"
+                            placeholder="e.g., San Francisco, New York, United States"
+                            class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700 focus:ring-2 focus:ring-primary-500"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Number of Leads</label>
+                        <input
+                            type="number"
+                            x-model="numLeads"
+                            min="5"
+                            max="50"
+                            class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700 focus:ring-2 focus:ring-primary-500"
+                        >
+                    </div>
+
+                    <button
+                        @click="startDiscovery()"
+                        :disabled="loading || !industry || !location"
+                        class="w-full py-3 px-4 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors flex items-center justify-center"
+                    >
+                        <span x-show="!loading">
+                            <i class="fas fa-search mr-2"></i>
+                            Discover Leads
+                        </span>
+                        <span x-show="loading">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>
+                            Searching...
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h3 class="font-semibold mb-4">Discovery Tips</h3>
+            <div class="space-y-4 text-sm text-gray-600 dark:text-gray-400">
+                <div class="flex items-start">
+                    <i class="fas fa-lightbulb text-yellow-500 mt-1 mr-3"></i>
+                    <p>Be specific with industries for better targeting</p>
+                </div>
+                <div class="flex items-start">
+                    <i class="fas fa-map-marker-alt text-red-500 mt-1 mr-3"></i>
+                    <p>Use city + state/country for precise location</p>
+                </div>
+                <div class="flex items-start">
+                    <i class="fas fa-rocket text-purple-500 mt-1 mr-3"></i>
+                    <p>Start with 10-20 leads to validate quality</p>
+                </div>
+            </div>
+
+            <div class="mt-6 p-4 bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg">
+                <h4 class="font-medium text-green-700 dark:text-green-300 mb-2">Popular Searches</h4>
+                <div class="space-y-2 text-sm">
+                    <button @click="industry = 'SaaS'; location = 'San Francisco'" class="text-primary-500 hover:underline block">SaaS in San Francisco</button>
+                    <button @click="industry = 'Fintech'; location = 'New York'" class="text-primary-500 hover:underline block">Fintech in New York</button>
+                    <button @click="industry = 'E-commerce'; location = 'London'" class="text-primary-500 hover:underline block">E-commerce in London</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div x-show="result" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div class="p-6 border-b dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold">Discovery Results</h2>
+                    <p class="text-sm text-gray-500">
+                        Found <span x-text="result?.leads_found || 0"></span> leads for
+                        <span x-text="result?.industry"></span> in <span x-text="result?.location"></span>
+                    </p>
+                </div>
+                <a href="/leads" class="text-primary-500 hover:text-primary-600 text-sm">
+                    View All Leads <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="divide-y dark:divide-gray-700">
+            <template x-for="lead in result?.leads || []" :key="lead.id">
+                <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="font-medium" x-text="lead.company_name"></p>
+                            <p class="text-sm text-gray-500" x-text="lead.website || 'No website'"></p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded text-xs">
+                                <i class="fas fa-check mr-1"></i>Saved
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Recent Discoveries -->
+    <div class="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h3 class="font-semibold mb-4">Recent Discoveries</h3>
+        <div class="space-y-3">
+            <template x-for="discovery in recentDiscoveries" :key="discovery.id">
+                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div>
+                        <p class="font-medium text-sm" x-text="discovery.industry + ' in ' + discovery.location"></p>
+                        <p class="text-xs text-gray-500" x-text="discovery.leads_found + ' leads found'"></p>
+                    </div>
+                    <button @click="industry = discovery.industry; location = discovery.location" class="text-primary-500 hover:text-primary-600 text-sm">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                </div>
+            </template>
+            <p x-show="recentDiscoveries.length === 0" class="text-sm text-gray-500 text-center py-4">
+                No recent discoveries
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function discovery() {
+    return {
+        industry: '',
+        location: '',
+        numLeads: 20,
+        loading: false,
+        result: null,
+        recentDiscoveries: [],
+
+        init() {
+            // Load recent discoveries from localStorage
+            const saved = localStorage.getItem('recentDiscoveries');
+            if (saved) {
+                this.recentDiscoveries = JSON.parse(saved).slice(0, 5);
+            }
+        },
+
+        async startDiscovery() {
+            if (!this.industry || !this.location) {
+                showToast('Please enter industry and location', 'error');
+                return;
+            }
+
+            this.loading = true;
+            this.result = null;
+
+            try {
+                this.result = await api.post('/discover', {
+                    industry: this.industry,
+                    location: this.location,
+                    num_leads: this.numLeads
+                });
+
+                if (this.result.leads_found > 0) {
+                    showToast(`Found ${this.result.leads_found} leads!`);
+
+                    // Save to recent discoveries
+                    this.recentDiscoveries.unshift({
+                        id: Date.now(),
+                        industry: this.industry,
+                        location: this.location,
+                        leads_found: this.result.leads_found
+                    });
+                    this.recentDiscoveries = this.recentDiscoveries.slice(0, 5);
+                    localStorage.setItem('recentDiscoveries', JSON.stringify(this.recentDiscoveries));
+                } else {
+                    showToast('No leads found. Try different criteria.', 'info');
+                }
+
+            } catch (e) {
+                console.error('Discovery error:', e);
+                showToast('Discovery failed: ' + e.message, 'error');
+            } finally {
+                this.loading = false;
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

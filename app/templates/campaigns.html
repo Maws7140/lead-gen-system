@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Campaigns - {{ app_name }}{% endblock %}
+{% block page_title %}Campaign Management{% endblock %}
+
+{% block content %}
+<div x-data="campaigns()" x-init="init()">
+
+    <!-- Header Actions -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-lg font-semibold">Your Campaigns</h2>
+            <p class="text-sm text-gray-500">Create and manage outreach campaigns</p>
+        </div>
+        <button @click="showCreateModal = true" class="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm">
+            <i class="fas fa-plus mr-2"></i>New Campaign
+        </button>
+    </div>
+
+    <!-- Campaign Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+            <p class="text-sm text-gray-500">Total Campaigns</p>
+            <p class="text-2xl font-bold" x-text="campaigns.length">0</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+            <p class="text-sm text-gray-500">Active</p>
+            <p class="text-2xl font-bold text-green-500" x-text="campaigns.filter(c => c.status === 'running').length">0</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+            <p class="text-sm text-gray-500">Total Sent</p>
+            <p class="text-2xl font-bold" x-text="campaigns.reduce((a, c) => a + c.sent_count, 0)">0</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+            <p class="text-sm text-gray-500">Open Rate</p>
+            <p class="text-2xl font-bold">--%</p>
+        </div>
+    </div>
+
+    <!-- Campaign List -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700/50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Campaign</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sent</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opens</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y dark:divide-gray-700">
+                    <template x-for="campaign in campaigns" :key="campaign.id">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                            <td class="px-6 py-4">
+                                <p class="font-medium" x-text="campaign.name"></p>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 text-xs rounded-full" :class="{
+                                    'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300': campaign.type === 'email',
+                                    'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300': campaign.type === 'sms',
+                                    'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300': campaign.type === 'multi-channel'
+                                }">
+                                    <i class="fas mr-1" :class="{
+                                        'fa-envelope': campaign.type === 'email',
+                                        'fa-sms': campaign.type === 'sms',
+                                        'fa-layer-group': campaign.type === 'multi-channel'
+                                    }"></i>
+                                    <span x-text="campaign.type"></span>
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 text-xs rounded-full" :class="{
+                                    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300': campaign.status === 'draft',
+                                    'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300': campaign.status === 'scheduled',
+                                    'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300': campaign.status === 'running',
+                                    'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300': campaign.status === 'completed'
+                                }" x-text="campaign.status"></span>
+                            </td>
+                            <td class="px-6 py-4 text-sm" x-text="campaign.sent_count + '/' + campaign.total_recipients"></td>
+                            <td class="px-6 py-4 text-sm" x-text="campaign.open_count"></td>
+                            <td class="px-6 py-4 text-sm text-gray-500" x-text="new Date(campaign.created_at).toLocaleDateString()"></td>
+                            <td class="px-6 py-4">
+                                <div class="flex space-x-2">
+                                    <button @click="viewCampaign(campaign.id)" class="text-gray-400 hover:text-primary-500">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="text-gray-400 hover:text-green-500">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    <tr x-show="campaigns.length === 0">
+                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                            <i class="fas fa-paper-plane text-4xl mb-2"></i>
+                            <p>No campaigns yet</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Create Campaign Modal -->
+    <div x-show="showCreateModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showCreateModal = false">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto m-4">
+            <div class="p-6 border-b dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-semibold">Create New Campaign</h2>
+                    <button @click="showCreateModal = false" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Campaign Name *</label>
+                    <input type="text" x-model="newCampaign.name" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700" placeholder="e.g., Q4 Outreach">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">Campaign Type</label>
+                    <select x-model="newCampaign.campaign_type" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700">
+                        <option value="email">Email</option>
+                        <option value="sms">SMS</option>
+                        <option value="multi-channel">Multi-channel</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">Description</label>
+                    <textarea x-model="newCampaign.description" rows="2" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700"></textarea>
+                </div>
+
+                <div x-show="newCampaign.campaign_type === 'email' || newCampaign.campaign_type === 'multi-channel'">
+                    <label class="block text-sm font-medium mb-1">Email Subject</label>
+                    <input type="text" x-model="newCampaign.email_subject" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700" placeholder="e.g., Quick question about {{company_name}}">
+                </div>
+
+                <div x-show="newCampaign.campaign_type === 'email' || newCampaign.campaign_type === 'multi-channel'">
+                    <label class="block text-sm font-medium mb-1">Email Template</label>
+                    <textarea x-model="newCampaign.email_template" rows="6" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700 font-mono text-sm" placeholder="Hi {{contact_name}},
+
+I noticed {{company_name}} is doing great work in {{industry}}..."></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Use {{field_name}} for personalization</p>
+                </div>
+
+                <div x-show="newCampaign.campaign_type === 'sms' || newCampaign.campaign_type === 'multi-channel'">
+                    <label class="block text-sm font-medium mb-1">SMS Template</label>
+                    <textarea x-model="newCampaign.sms_template" rows="3" class="w-full px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700" placeholder="Hi {{contact_name}}, I'd love to discuss..."></textarea>
+                </div>
+            </div>
+            <div class="p-6 border-t dark:border-gray-700 flex justify-end gap-2">
+                <button @click="showCreateModal = false" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg">Cancel</button>
+                <button @click="createCampaign()" class="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg">Create Campaign</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function campaigns() {
+    return {
+        campaigns: [],
+        showCreateModal: false,
+        newCampaign: {
+            name: '',
+            description: '',
+            campaign_type: 'email',
+            email_subject: '',
+            email_template: '',
+            sms_template: ''
+        },
+
+        async init() {
+            await this.loadCampaigns();
+        },
+
+        async loadCampaigns() {
+            try {
+                this.campaigns = await api.get('/campaigns');
+            } catch (e) {
+                console.error('Failed to load campaigns:', e);
+            }
+        },
+
+        async createCampaign() {
+            if (!this.newCampaign.name) {
+                showToast('Campaign name is required', 'error');
+                return;
+            }
+
+            try {
+                await api.post('/campaigns', this.newCampaign);
+                showToast('Campaign created successfully');
+                this.showCreateModal = false;
+                this.newCampaign = { name: '', description: '', campaign_type: 'email', email_subject: '', email_template: '', sms_template: '' };
+                await this.loadCampaigns();
+            } catch (e) {
+                showToast('Failed to create campaign', 'error');
+            }
+        },
+
+        async viewCampaign(id) {
+            // TODO: Open campaign detail modal
+            const campaign = await api.get(`/campaigns/${id}`);
+            console.log(campaign);
+        }
+    };
+}
+</script>
+{% endblock %}
